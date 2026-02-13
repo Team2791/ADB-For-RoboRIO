@@ -1,26 +1,16 @@
 #!/usr/bin/env bash
 #########################################################################################
-# build-adb.sh – cross-compiles Android Debug Bridge using the 2022 RoboRIO toolchain
-#                using the standalone CMake repo https://github.com/prife/adb
+# build-adb.sh – cross-compiles Android Debug Bridge using the 2025 RoboRIO toolchain
+#                in docker using the standalone CMake repo https://github.com/prife/adb
 #########################################################################################
 set -euo pipefail
 
-# 0. Locate roboRIO 2022 toolchain
-TOPDIR=$(pwd)
-TC_PREFIX=arm-frc2022-linux-gnueabi
+#install missing prerequsite
+apt update
+apt install -y ed cmake ninja-build git python3 libz-dev libssl-dev libusb-1.0-0-dev
 
-SYSROOT_DIR="$TOPDIR/frc2022/roborio/$TC_PREFIX"
-BIN_DIR="$TOPDIR/frc2022/roborio/bin"
-
-[[ -d "$SYSROOT_DIR" ]] || { echo "Error: sysroot missing: $SYSROOT_DIR"; exit 1; }
-[[ -d "$BIN_DIR"    ]] || { echo "Error: bin missing:    $BIN_DIR";    exit 1; }
-
-for t in gcc g++ ar ld strip ranlib; do
-  [[ -x "$BIN_DIR/${TC_PREFIX}-$t" ]] || {
-    echo "Error: $BIN_DIR/${TC_PREFIX}-$t not found"; exit 1; }
-done
-
-export PATH="$BIN_DIR:$PATH"
+TOPDIR='/v'
+TC_PREFIX=arm-frc2025-linux-gnueabi
 
 # 1. User-configurable settings
 ADB_REF="" # Empty = default
@@ -29,7 +19,9 @@ BUILD_DIR="$TOPDIR/build"
 INSTALL_DIR="$TOPDIR/out"
 BORINGSSL_DIR="$SRC_DIR/lib/boringssl"
 BORINGSSL_GIT=https://salsa.debian.org/android-tools-team/android-platform-external-boringssl.git
-BORINGSSL_TAG=debian/8.1.0+r23-3
+BORINGSSL_TAG=bookworm-backports
+
+git config --global --add safe.directory $SRC_DIR
 
 # 2. Clone or update prife/adb
 if [[ ! -d "$SRC_DIR" ]]; then
@@ -52,10 +44,10 @@ if [[ ! -e "$BORINGSSL_DIR/debian/out/libcrypto.a" ]]; then
     "$BORINGSSL_GIT" "$BORINGSSL_DIR"
   pushd "$BORINGSSL_DIR" >/dev/null
     rm -rf debian/out
-    make -f debian/libcrypto.mk \
+    make -f debian/libcrypto.mk -j"$(nproc)"\
          CC=${TC_PREFIX}-gcc   CFLAGS=-fPIC \
          DEB_HOST_ARCH=armhf
-    make -f debian/libssl.mk \
+    make -f debian/libssl.mk -j"$(nproc)"\
          CXX=${TC_PREFIX}-g++ CXXFLAGS=-fPIC \
          DEB_HOST_ARCH=armhf
   popd >/dev/null
@@ -65,7 +57,7 @@ BORINGSSL_OUT="$BORINGSSL_DIR/debian/out"
 BORINGSSL_INC="$BORINGSSL_DIR/src/include"
 
 # 4. Install BoringSSL into prife/adb's prebuilt tree
-PREBUILT_ARM32="$SRC_DIR/prebuilt/linux/arm-frc2022"
+PREBUILT_ARM32="$SRC_DIR/prebuilt/linux/arm-frc2025"
 rm -rf "$PREBUILT_ARM32"
 mkdir -p "$PREBUILT_ARM32"
 cp "$BORINGSSL_OUT"/libcrypto.* "$PREBUILT_ARM32/"
@@ -76,7 +68,7 @@ echo "==> Inserting ARM prebuilt into src/CMakeLists.txt…"
 ed -s "$SRC_DIR/src/CMakeLists.txt" << 'EOF'
 /prebuilt\/linux\/x86-64/ i
 if(CMAKE_HOST_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm.*")
-  link_directories("${CMAKE_SOURCE_DIR}/prebuilt/linux/arm-frc2022")
+  link_directories("${CMAKE_SOURCE_DIR}/prebuilt/linux/arm-frc2025")
 endif()
 .
 w
@@ -101,8 +93,6 @@ cat >"$TC_FILE" <<EOF
 set(CMAKE_SYSTEM_NAME       Linux)
 set(CMAKE_SYSTEM_PROCESSOR  arm)
 
-set(CMAKE_SYSROOT           $SYSROOT_DIR)
-set(CMAKE_FIND_ROOT_PATH    \${CMAKE_SYSROOT})
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

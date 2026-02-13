@@ -1,5 +1,7 @@
 # ADB-RoboRIO-Installer
-A port of ADB for the NI RoboRIO. Intended for use in First Robotics Challenge.
+A port of ADB for the NI RoboRIO. Intended for use in First Robotics Challenge. 
+
+This fork utilizes the docker container provided by wpilib to use the most recent toolchain. 
 
 ### Installing ADB on your RoboRIO
 1. Clone this repository onto a USB flash drive.
@@ -14,13 +16,10 @@ chmod 755 install.sh
 ```
 
 ### Building ADB for the RoboRIO from sources.
-1. Clone this repository onto your computer.
+1. Clone this repository onto your computer, docker will need to be installed.
 2. cd into the repository and enter the ```adb_toolchain-builder``` directory.
 3. Run the following commands:
 ```
-sudo su
-chmod 755 *.sh
-./get-dependencies.sh
-./build-adb.sh
+./build.sh
 ```
-After adb is built, you can replace the existing ADB executable in ```install_files/usr/lib/android-sdk/platform-tools/``` with the compiled executable (which should be in your current ```adb_toolchain-builder``` directory as ```adb```.)
+After adb is built, the files will be copied to the install_files folder for installation. 

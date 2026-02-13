@@ -4,13 +4,13 @@ A port of ADB for the NI RoboRIO. Intended for use in First Robotics Challenge.
 This fork utilizes the docker container provided by wpilib to use the most recent toolchain. 
 
 ### Installing ADB on your RoboRIO
-1. Clone this repository onto a USB flash drive.
-2. Plug the flash drive into the RoboRIO.
+1. Download most recent release from https://github.com/Team2791/ADB-For-RoboRIO/releases/
+2. Move the file to the RoboRIO using a USB drive or scp
 3. SSH into the RoboRIO using the SSH client of your choice as user ```admin@roboRIO-{your team number}-frc.local```. (i.e. PuTTY)
-4. cd into the directory of the installer.
+4. cd into the directory with the tar file
 5. Run the following commands:
 ```
-sed -i 's/\r$//' install.sh
+ tar -zxf ADB-For-RoboRio.tar.gz
 chmod 755 install.sh 
 ./install.sh
 ```
